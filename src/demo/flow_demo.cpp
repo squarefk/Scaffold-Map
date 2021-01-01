@@ -27,7 +27,7 @@ void flow_initializer(std::string filename,
                           Eigen::MatrixXi &sTT,
                           Eigen::VectorXi &frame_id,
                           Eigen::MatrixXi &surface_F,
-                          int& inner_scaf_tets) {
+                          int& inner_scaf_tets, std::string cube_file) {
   using namespace Eigen;
   using namespace std;
   Eigen::MatrixXd V_init;
@@ -35,7 +35,7 @@ void flow_initializer(std::string filename,
 
   Eigen::MatrixXd cube_V, id_cube_V;
   Eigen::MatrixXi cube_F;
-  igl::read_triangle_mesh("../nice_cube.obj", id_cube_V, cube_F);
+  igl::read_triangle_mesh(cube_file.c_str(), id_cube_V, cube_F);
 
   MatrixXi mTF;
   igl::read_triangle_mesh(target_file, mTV, mTT);
@@ -43,8 +43,9 @@ void flow_initializer(std::string filename,
 
   cube_V.resizeLike(id_cube_V);
   double max_V0 = V_init.maxCoeff();
+  printf("??????????????? COEFFFFF %.10f\n", 3 * max_V0);
   for (int i = 0; i < 3; i++)
-    cube_V.col(i) = 3 * max_V0 * id_cube_V.col(i);
+    cube_V.col(i) = id_cube_V.col(i);
   MatrixXd wV;
   MatrixXi wF, TF;
 

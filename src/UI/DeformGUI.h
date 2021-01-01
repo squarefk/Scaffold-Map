@@ -24,7 +24,7 @@ class DeformGUI {
  public:
   DeformGUI(igl::opengl::glfw::Viewer &,StateManager &);
 
-  bool key_press(unsigned int key, int mod);
+  bool key_press(unsigned int key, int mod, std::string filename=std::string(""));
 
  private:
   bool mouse_down(int button, int mod);

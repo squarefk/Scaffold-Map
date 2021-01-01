@@ -5,6 +5,9 @@
 #include "../ReWeightedARAP.h"
 #include "../StateManager.h"
 #include "../util/triangle_utils.h"
+#include <iostream>
+#include <sys/stat.h>
+#include <sys/types.h>
 // #include <nanogui/formhelper.h>
 #include <igl/slim.h>
 #include <igl/file_dialog_save.h>
@@ -31,7 +34,23 @@ double compute_energy(igl::SLIMData &s, Eigen::MatrixXd &V_new);
 };
 };
 
-bool DeformGUI::key_press(unsigned int key, int mod) {
+void Write_TriMesh_Obj(Eigen::MatrixXd w_uv, Eigen::MatrixXi surface_F, const std::string& filename)
+{
+    FILE *file = fopen(filename.c_str(), "w");
+    if (!file) {
+        puts("failed to create file");
+        exit(-1);
+    }
+    for (int i = 0; i < w_uv.rows(); ++i) {
+        fprintf(file, "v %le %le %le\n", w_uv(i, 0), w_uv(i, 1), w_uv(i, 2));
+    }
+    for (int i = 0; i < surface_F.rows(); ++i) {
+        fprintf(file, "f %d %d %d\n", surface_F(i, 0) + 1, surface_F(i, 1) + 1, surface_F(i, 2) + 1);
+    }
+    fclose(file);
+}
+
+bool DeformGUI::key_press(unsigned int key, int mod, std::string filename) {
   using namespace Eigen;
   using namespace std;
   ScafData &sd = s_.scaf_data;
@@ -52,6 +71,17 @@ bool DeformGUI::key_press(unsigned int key, int mod) {
       use_square_frame = false;
       break;
     }
+
+  static int frame = 0;
+  std::string out_folder = filename.substr(3, filename.size() - 7);
+  printf("!!!!!!!!!!!!!!!!!!!! %s\n", out_folder.c_str());
+  if (mkdir(out_folder.c_str(), 0777) == -1)
+    cout << "Error :  " << strerror(errno) << endl;
+  else
+    cout << "Directory created";
+  printf("==================== %d %d\n", sd.m_T.rows(), sd.m_V.rows());
+  Eigen::MatrixXd old_w_uv = sd.w_uv;
+  Write_TriMesh_Obj(sd.w_uv, sd.surface_F, out_folder + std::string("/") + std::to_string(++frame) + std::string(".obj"));
 
   static double last_mesh_energy = ws_solver->compute_energy(sd.w_uv, false)/
       sd.mesh_measure - 2*d_.dim;
@@ -112,6 +142,13 @@ bool DeformGUI::key_press(unsigned int key, int mod) {
       last_mesh_energy = current_mesh_energy;
 
     }
+    double inf_norm = 0;
+    for (int i = 0; i < sd.m_V.rows(); ++i)
+      for (int d = 0; d < d_.dim; ++d)
+        inf_norm = std::max(std::abs(sd.w_uv(i, d) - old_w_uv(i, d)), inf_norm);
+    printf("[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]] %.10f\n", inf_norm);
+    if (inf_norm < 0.6 * 1e-5)
+      exit(0);
   }
 
   switch (key) {
